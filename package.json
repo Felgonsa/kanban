@@ -2,7 +2,6 @@
   "name": "todo",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://github.com/Felgonsa/ToDoListReact.git",
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
     "@testing-library/dom": "^10.4.0",
