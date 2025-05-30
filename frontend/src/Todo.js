@@ -75,31 +75,26 @@ function Todo() {
 
     async function onAddItem(dados) {
         try {
-            const dataValida = new Date(dados.previsao);
-            if (isNaN(dataValida)) throw new Error("Data inválida");
-
-            const dadosTratados = {
-                ...dados,
-                previsao: dataValida.toISOString()
-            };
-
+        
             const response = await fetch("http://localhost:5000/api/fluxos", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(dadosTratados)
+                body: JSON.stringify(dados)
             });
 
             if (!response.ok) throw new Error("Erro ao adicionar");
 
             const savedItem = await response.json();
 
-            setColumns(prev => ({
-                ...prev,
-                aguardando: {
-                    ...prev.aguardando,
-                    items: [...prev.aguardando.items, savedItem]
-                }
-            }));
+            // setColumns(prev => ({
+            //     ...prev,
+            //     aguardando: {
+            //         ...prev.aguardando,
+            //         items: [...prev.aguardando.items, savedItem]
+            //     }
+            // }));
+            await buscarFluxos(); // Recarrega os dados atualizados
+
         } catch (err) {
             console.error(err);
             Swal.fire("Erro", "Não foi possível adicionar o item.", "error");
@@ -108,18 +103,12 @@ function Todo() {
 
     async function onItemEdited(id, dadosAtualizados) {
         try {
-            const dataValida = new Date(dadosAtualizados.previsao);
-            if (isNaN(dataValida)) throw new Error("Data inválida");
-
-            const dadosTratados = {
-                ...dadosAtualizados,
-                previsao: dataValida.toISOString()
-            };
+           
 
             const response = await fetch(`http://localhost:5000/api/fluxos/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(dadosTratados)
+                body: JSON.stringify(dadosAtualizados)
             });
 
             if (!response.ok) throw new Error("Erro ao editar");

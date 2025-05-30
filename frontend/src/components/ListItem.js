@@ -46,7 +46,7 @@ function handleEditClick(item, onItemEdited) {
       const status = document.getElementById('status').value;
       const previsao = document.getElementById('previsao').value;
 
-      console.log(previsao);
+
       
 
       if (!cliente || !carro || !placa || !status || !previsao) {
@@ -72,7 +72,8 @@ function ListItem({ item, onItemCompleted, onItemDeleted, onItemEdited }) {
         <div><strong>Cliente:</strong> {item.cliente}</div>
         <div><strong>Carro:</strong> {item.carro}</div>
         <div><strong>Placa:</strong> {item.placa}</div>
-        <div><strong>Prev:</strong>{formatarDataISO(item.previsao)}</div>
+        <div><strong>Prev:</strong>{item.previsao}</div>
+        {/* <div><strong>Prev:</strong>{formatarDataISO(item.previsao)}</div> */}
 
       </div>
 
@@ -81,7 +82,7 @@ function ListItem({ item, onItemCompleted, onItemDeleted, onItemEdited }) {
           <Completed completed={item.completed} />
         </button> */}
         
-        <button onClick={() => handleEditClick(item, onItemEdited)}>✏️</button>
+        <button className='button' onClick={() => handleEditClick(item, onItemEdited)}>✏️</button>
         <button className="button" onClick={() => onItemDeleted(item)}>🗑️</button>
       </div>
     </li>
