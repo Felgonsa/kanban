@@ -159,6 +159,51 @@ body {
   cursor: pointer;
   transition: background-color 0.3s ease;
 }
+
+.atrasado {
+  background-color: #ff4d4d;
+}
+
+.hoje{
+  background-color: #ffcc00;
+}
+.searchBar{
+  width: 100px;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  font-size: 1.1rem;
+  background-color: #ffffff;
+  color: #000000;
+  
+}
+
+/* Scrollbar padrão (WebKit) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+/* Fundo da barra */
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+/* Parte móvel da barra */
+::-webkit-scrollbar-thumb {
+  background-color: #c4c4c4;
+  border-radius: 10px;
+  transition: background-color 0.3s;
+}
+
+/* Ao passar o mouse */
+::-webkit-scrollbar-thumb:hover {
+  background-color: #888;
+}
+
+
+
 /* Para telas menores que 1024px (tablets e notebooks pequenos) */
 @media (max-width: 1024px) {
   .input {

@@ -1,17 +1,20 @@
 // ==== Todo.js ====
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import "./Todo.css";
 import TodoForm from "./components/TodoForm";
 import Kanban from "./components/Kanban";
 import Swal from "sweetalert2";
+import SearchBar from "./components/SearchBar";
 
 function Todo() {
-    const [columns, setColumns] = React.useState({
+    const [columns, setColumns] = useState({
         aguardando: { name: "Aguardando Peças", items: [] },
         liberado: { name: "Liberados para Agendamento", items: [] },
         agendado: { name: "Agendados", items: [] },
         finalizado: { name: "Finalizados", items: [] }
     });
+
+    const [busca, setBusca] = useState('');
 
     useEffect(() => {
         buscarFluxos();
@@ -75,7 +78,6 @@ function Todo() {
 
     async function onAddItem(dados) {
         try {
-        
             const response = await fetch("http://localhost:5000/api/fluxos", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -84,16 +86,7 @@ function Todo() {
 
             if (!response.ok) throw new Error("Erro ao adicionar");
 
-            const savedItem = await response.json();
-
-            // setColumns(prev => ({
-            //     ...prev,
-            //     aguardando: {
-            //         ...prev.aguardando,
-            //         items: [...prev.aguardando.items, savedItem]
-            //     }
-            // }));
-            await buscarFluxos(); // Recarrega os dados atualizados
+            await buscarFluxos();
 
         } catch (err) {
             console.error(err);
@@ -103,8 +96,6 @@ function Todo() {
 
     async function onItemEdited(id, dadosAtualizados) {
         try {
-           
-
             const response = await fetch(`http://localhost:5000/api/fluxos/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
@@ -113,7 +104,7 @@ function Todo() {
 
             if (!response.ok) throw new Error("Erro ao editar");
 
-            await buscarFluxos(); // Recarrega os dados atualizados
+            await buscarFluxos();
 
         } catch (error) {
             console.error("Erro ao editar item:", error);
@@ -158,15 +149,30 @@ function Todo() {
         }
     }
 
+    // ======= FILTRO APLICADO AO KANBAN =======
+    const colunasFiltradas = {};
+    for (const key in columns) {
+        colunasFiltradas[key] = {
+            ...columns[key],
+            items: columns[key].items.filter(item =>
+                item.cliente.toLowerCase().includes(busca.toLowerCase()) ||
+                item.carro.toLowerCase().includes(busca.toLowerCase()) ||
+                item.placa.toLowerCase().includes(busca.toLowerCase())
+            )
+        };
+    }
+
     return (
         <div className="container">
             <h1 className="title">Fluxo</h1>
             <div className="subTitle">Arraste para reordenar</div>
 
+            <SearchBar busca={busca} setBusca={setBusca} />
+
             <TodoForm onAddItem={onAddItem} />
 
             <Kanban
-                columns={columns}
+                columns={colunasFiltradas}
                 onDragEnd={onDragEnd}
                 onItemCompleted={() => { }}
                 onItemDeleted={onItemDeleted}

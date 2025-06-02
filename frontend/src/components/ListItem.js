@@ -8,6 +8,22 @@ function Completed(props) {
     : <span>✔</span>;
 }
 
+function getCorDaData(previsao) {
+  // Divide a string '31/05/2025' em partes e converte para número
+  const [dia, mes, ano] = previsao.split('/').map(Number);
+  const data = new Date(ano, mes - 1, dia); // mês - 1 porque começa do zero
+  const hoje = new Date();
+
+  // Zera as horas para comparar só a data
+  data.setHours(0, 0, 0, 0);
+  hoje.setHours(0, 0, 0, 0);
+
+  if (data < hoje) return 'atrasado';
+  if (data.getTime() === hoje.getTime()) return 'hoje';
+  return 'noPrazo';
+}
+
+
 function formatarDataISO(isoString) {
   const data = new Date(isoString);
   const dia = String(data.getDate()).padStart(2, '0');
@@ -66,8 +82,9 @@ function handleEditClick(item, onItemEdited) {
 
 
 function ListItem({ item, onItemCompleted, onItemDeleted, onItemEdited }) {
+  const corData = getCorDaData(item.previsao);
   return (
-    <li className={item.completed ? "completed listItem" : "listItem"}>
+      <li className={`listItem ${item.completed ? "completed" : ""} ${corData}`}>
       <div className="itemDetails">
         <div><strong>Cliente:</strong> {item.cliente}</div>
         <div><strong>Carro:</strong> {item.carro}</div>
