@@ -2,7 +2,16 @@
 import React from "react";
 import Swal from "sweetalert2";
 
-function TodoForm({ onAddItem }) {
+function TodoForm({ onAddItem, columns }) {
+
+
+  const generateColumnOptions = () => {
+
+    return Object.entries(columns).map(([columnId, columnData]) => {
+      return `<option value="${columnId}">${columnData.name}</option>`;
+    }).join(''); // .join('') transforma o array em uma string única de HTML
+  };
+
   const handleAddClick = () => {
     Swal.fire({
       title: "Novo Cliente",
@@ -12,10 +21,7 @@ function TodoForm({ onAddItem }) {
         <input id="placa" class="swal2-input" placeholder="Placa">
         <input id="previsao" type="date" class="swal2-input">
         <select id="status" class="swal2-input">
-          <option value="aguardando">Aguardando</option>
-          <option value="liberado">Liberado</option>
-          <option value="agendado">Agendado</option>
-          <option value="finalizado">Finalizado</option>
+          ${generateColumnOptions()} {/* 3. Chame a função para inserir as opções aqui */}
         </select>
       `,
       focusConfirm: false,

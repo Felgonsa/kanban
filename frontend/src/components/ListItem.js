@@ -1,5 +1,6 @@
 import React from 'react';
 import Swal from 'sweetalert2';
+import { FaCheck } from 'react-icons/fa'; // Importe o ícone de concluir
 
 
 function Completed(props) {
@@ -24,13 +25,6 @@ function getCorDaData(previsao) {
 }
 
 
-function formatarDataISO(isoString) {
-  const data = new Date(isoString);
-  const dia = String(data.getDate()).padStart(2, '0');
-  const mes = String(data.getMonth() + 1).padStart(2, '0');
-  const ano = data.getFullYear();
-  return `${dia}/${mes}/${ano}`;
-}
 
 function handleEditClick(item, onItemEdited) {
   Swal.fire({
@@ -81,10 +75,39 @@ function handleEditClick(item, onItemEdited) {
 
 
 
-function ListItem({ item, onItemCompleted, onItemDeleted, onItemEdited }) {
+function ListItem({ item, onItemConcluded, onItemDeleted, onItemEdited }) {
   const corData = getCorDaData(item.previsao);
+
+  const handleConcluirClick = () => {
+    Swal.fire({
+      title: 'Concluir Veículo',
+      html: `
+        <p>Por favor, informe a data de entrega do veículo <strong>${item.carro}</strong>.</p>
+        <input type="date" id="data_entrega" class="swal2-input" value="${new Date().toISOString().split('T')[0]}">
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sim, concluir!',
+      cancelButtonText: 'Cancelar',
+      // Validação antes de confirmar
+      preConfirm: () => {
+        const dataEntrega = document.getElementById('data_entrega').value;
+        if (!dataEntrega) {
+          Swal.showValidationMessage('Por favor, selecione uma data de entrega.');
+          return false;
+        }
+        return dataEntrega;
+      }
+    }).then((result) => {
+      // 2. Se o usuário confirmou e a data é válida, chame a função principal
+      if (result.isConfirmed && result.value) {
+        const deliveryDate = result.value;
+        onItemConcluded(item, deliveryDate); // Passa o item E a data de entrega
+      }
+    });
+  };
   return (
-      <li className={`listItem ${item.completed ? "completed" : ""} ${corData}`}>
+      <li className={`listItem ${corData}`}>
       <div className="itemDetails">
         <div><strong>Cliente:</strong> {item.cliente}</div>
         <div><strong>Carro:</strong> {item.carro}</div>
@@ -95,9 +118,9 @@ function ListItem({ item, onItemCompleted, onItemDeleted, onItemEdited }) {
       </div>
 
       <div className="buttons">
-        {/* <button className="button" onClick={() => onItemCompleted(item)}>
-          <Completed completed={item.completed} />
-        </button> */}
+        <button className='button' onClick={handleConcluirClick} title="Entregar Veículo">
+          <FaCheck color="green" />
+        </button>
         
         <button className='button' onClick={() => handleEditClick(item, onItemEdited)}>✏️</button>
         <button className="button" onClick={() => onItemDeleted(item)}>🗑️</button>

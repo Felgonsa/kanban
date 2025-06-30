@@ -1,0 +1,22 @@
+/* src/App.css */
+
+.main-nav {
+  /* background-color: #11111f; */
+  border: 1px solid #444;
+  padding: 15px;
+  display: flex;
+  gap: 20px;
+  border-radius: 20px;
+}
+
+.main-nav a {
+  color: white;
+  text-decoration: none;
+  font-size: 1.1em;
+}
+
+main {
+  padding: 20px;
+  overflow-y: auto;
+  flex-grow: 1;
+}

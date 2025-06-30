@@ -1,5 +1,5 @@
 // ==== Todo.js ====
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import "./Todo.css";
 import TodoForm from "./components/TodoForm";
 import Kanban from "./components/Kanban";
@@ -7,74 +7,104 @@ import Swal from "sweetalert2";
 import SearchBar from "./components/SearchBar";
 
 function Todo() {
-    const [columns, setColumns] = useState({
-        aguardando: { name: "Aguardando Peças", items: [] },
-        liberado: { name: "Liberados para Agendamento", items: [] },
-        agendado: { name: "Agendados", items: [] },
-        finalizado: { name: "Finalizados", items: [] }
-    });
-
+    const [columns, setColumns] = useState({});
     const [busca, setBusca] = useState('');
+    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        buscarFluxos();
+
+    const fetchData = useCallback(async () => {
+        try {
+            console.log("Buscando dados...");
+            const [colunasRes, fluxosRes] = await Promise.all([
+                fetch("http://localhost:5000/api/colunas"),
+                fetch("http://localhost:5000/api/fluxos")
+            ]);
+
+            if (!colunasRes.ok) throw new Error('Falha ao buscar colunas');
+
+            const colunasData = await colunasRes.json();
+            const fluxosData = await fluxosRes.json();
+
+            const stateInicial = {};
+            colunasData.forEach(coluna => {
+                stateInicial[coluna.id] = {
+                    name: coluna.nome,
+                    items: fluxosData.filter(item => item.status === coluna.id)
+                };
+            });
+
+            setColumns(stateInicial);
+        } catch (error) {
+            console.error("Erro ao buscar dados:", error);
+            Swal.fire("Erro de Rede", "Não foi possível carregar os dados do quadro.", "error");
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    // 3. O useEffect agora apenas chama a função fetchData
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
 
     async function buscarFluxos() {
         const res = await fetch("http://localhost:5000/api/fluxos");
         const data = await res.json();
-        setColumns({
-            aguardando: { name: "Aguardando Peças", items: data.filter(i => i.status === "aguardando") },
-            liberado: { name: "Liberados para Agendamento", items: data.filter(i => i.status === "liberado") },
-            agendado: { name: "Agendados", items: data.filter(i => i.status === "agendado") },
-            finalizado: { name: "Finalizados", items: data.filter(i => i.status === "finalizado") },
+        setColumns(prevColumns => {
+            const newState = { ...prevColumns };
+            Object.keys(newState).forEach(colId => {
+                newState[colId].items = data.filter(i => i.status === colId);
+            });
+            return newState;
         });
     }
 
-    function onDragEnd(result) {
+    const onDragEnd = async (result) => {
         const { source, destination } = result;
-        if (!destination) return;
 
-        setColumns(prevColumns => {
-            const sourceCol = prevColumns[source.droppableId];
-            const destCol = prevColumns[destination.droppableId];
-            const sourceItems = Array.from(sourceCol.items);
-            const destItems = Array.from(destCol.items);
-            const [movedItem] = sourceItems.splice(source.index, 1);
+        // 1. Sai da função se o usuário soltar fora de uma coluna válida
+        if (!destination) {
+            return;
+        }
+     
+        const movedItem = colunasFiltradas[source.droppableId].items[source.index];
 
-            movedItem.status = destination.droppableId;
+        // Se o item foi movido para a mesma coluna (apenas reordenado)
+        if (source.droppableId === destination.droppableId) {
+          return;
+        }
 
-            fetch(`http://localhost:5000/api/fluxos/${movedItem.id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(movedItem)
+        // Se o item foi movido para uma coluna DIFERENTE
+        try {
+            // 3. Atualiza o status do item CORRETO que foi identificado
+            const updatedItem = {
+                ...movedItem,
+                status: destination.droppableId,
+            };
+
+            // 4. Envia a atualização para a API
+            const response = await fetch(`http://localhost:5000/api/fluxos/${updatedItem.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedItem)
             });
 
-            if (source.droppableId === destination.droppableId) {
-                sourceItems.splice(destination.index, 0, movedItem);
-                return {
-                    ...prevColumns,
-                    [source.droppableId]: {
-                        ...sourceCol,
-                        items: sourceItems,
-                    },
-                };
-            } else {
-                destItems.splice(destination.index, 0, movedItem);
-                return {
-                    ...prevColumns,
-                    [source.droppableId]: {
-                        ...sourceCol,
-                        items: sourceItems,
-                    },
-                    [destination.droppableId]: {
-                        ...destCol,
-                        items: destItems,
-                    },
-                };
+            if (!response.ok) {
+                throw new Error('Falha ao atualizar o status no servidor');
             }
-        });
-    }
+
+            // 5. Após a API confirmar a mudança, recarrega todos os dados do zero.
+            // Esta é a forma mais segura de garantir que a tela reflita o estado real do banco de dados.
+            fetchData();
+
+        } catch (error) {
+            console.error("Erro ao mover o item:", error);
+            Swal.fire('Erro!', 'Não foi possível mover o item.', 'error');
+            // Se der erro, recarregue os dados para reverter visualmente a mudança
+            fetchData();
+        }
+    };
 
     async function onAddItem(dados) {
         try {
@@ -149,6 +179,81 @@ function Todo() {
         }
     }
 
+    async function handleAddColumn() {
+        const { value: nome } = await Swal.fire({
+            title: 'Nova Coluna',
+            input: 'text',
+            inputLabel: 'Nome da nova coluna',
+            inputPlaceholder: 'Ex: Em Pintura',
+            showCancelButton: true,
+            confirmButtonText: 'Criar',
+            cancelButtonText: 'Cancelar',
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'Você precisa digitar um nome!';
+                }
+            }
+        });
+
+        if (nome) {
+            try {
+                const response = await fetch("http://localhost:5000/api/colunas", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ nome })
+                });
+                if (!response.ok) throw new Error("Erro ao criar coluna");
+                fetchData(); // Recarrega todos os dados
+            } catch (err) {
+                Swal.fire("Erro", "Não foi possível criar a coluna.", "error");
+            }
+        }
+    }
+
+    async function handleEditColumn(columnId, currentName) {
+        const { value: nome } = await Swal.fire({
+            title: 'Editar Nome da Coluna',
+            input: 'text',
+            inputValue: currentName,
+            showCancelButton: true,
+        });
+
+        if (nome && nome !== currentName) {
+            await fetch(`http://localhost:5000/api/colunas/${columnId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ nome })
+            });
+
+            fetchData()
+        }
+    }
+
+    async function handleDeleteColumn(columnId) {
+        const result = await Swal.fire({
+            title: 'Tem certeza?',
+            text: "Você não poderá reverter isso! Apagar uma coluna só é permitido se ela estiver vazia.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sim, apagar!',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const response = await fetch(`http://localhost:5000/api/colunas/${columnId}`, {
+                    method: 'DELETE'
+                });
+                const message = await response.text();
+                if (!response.ok) throw new Error(message);
+                Swal.fire('Apagada!', message, 'success');
+                fetchData();
+            } catch (error) {
+                Swal.fire('Erro!', error.message, 'error');
+            }
+        }
+    }
+
     // ======= FILTRO APLICADO AO KANBAN =======
     const colunasFiltradas = {};
     for (const key in columns) {
@@ -162,6 +267,24 @@ function Todo() {
         };
     }
 
+    async function handleConcludeItem(item) {
+        try {
+            const hoje = new Date().toISOString().split('T')[0]; // Pega a data de hoje no formato YYYY-MM-DD
+
+            await fetch(`http://localhost:5000/api/fluxos/${item.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                // Atualiza o status e a data de entrega
+                body: JSON.stringify({ ...item, status: 'concluido', data_entrega: hoje })
+            });
+
+            Swal.fire('Concluído!', 'O veículo foi movido para a lista de concluídos.', 'success');
+            fetchData(); // Recarrega o quadro, fazendo o item desaparecer
+        } catch (error) {
+            Swal.fire('Erro!', 'Não foi possível concluir o veículo.', 'error');
+        }
+    }
+
     return (
         <div className="container">
             <h1 className="title">Fluxo</h1>
@@ -169,7 +292,9 @@ function Todo() {
 
             <SearchBar busca={busca} setBusca={setBusca} />
 
-            <TodoForm onAddItem={onAddItem} />
+            <TodoForm onAddItem={onAddItem} columns={columns} />
+
+            <button onClick={handleAddColumn} className="add-column-btn">Adicionar Coluna</button>
 
             <Kanban
                 columns={colunasFiltradas}
@@ -177,6 +302,9 @@ function Todo() {
                 onItemCompleted={() => { }}
                 onItemDeleted={onItemDeleted}
                 onItemEdited={onItemEdited}
+                onEditColumn={handleEditColumn}
+                onDeleteColumn={handleDeleteColumn}
+                onItemConcluded={handleConcludeItem}
             />
         </div>
     );
