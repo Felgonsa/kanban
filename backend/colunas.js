@@ -63,4 +63,59 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// Rota para reordenar colunas
+router.post('/reorder', async (req, res) => {
+  const { columnId, direction } = req.body; // 'up' ou 'down'
+
+  try {
+    const client = await pool.connect();
+    await client.query('BEGIN'); // Inicia uma transação para garantir a consistência
+
+    // Pega a coluna que queremos mover e sua ordem atual
+    const targetColumnRes = await client.query('SELECT ordem FROM colunas WHERE id = $1', [columnId]);
+    if (targetColumnRes.rows.length === 0) {
+      throw new Error('Coluna não encontrada');
+    }
+    const targetOrder = targetColumnRes.rows[0].ordem;
+
+    // Encontra a coluna adjacente para fazer a troca
+    let adjacentColumnRes;
+    if (direction === 'up') {
+      // Pega a coluna com a maior ordem que seja MENOR que a atual
+      adjacentColumnRes = await client.query(
+        'SELECT id, ordem FROM colunas WHERE ordem < $1 ORDER BY ordem DESC LIMIT 1',
+        [targetOrder]
+      );
+    } else { // direction === 'down'
+      // Pega a coluna com a menor ordem que seja MAIOR que a atual
+      adjacentColumnRes = await client.query(
+        'SELECT id, ordem FROM colunas WHERE ordem > $1 ORDER BY ordem ASC LIMIT 1',
+        [targetOrder]
+      );
+    }
+
+    // Se encontrou uma coluna para trocar
+    if (adjacentColumnRes.rows.length > 0) {
+      const adjacentColumn = adjacentColumnRes.rows[0];
+      const adjacentOrder = adjacentColumn.ordem;
+
+      // Troca as posições de ordem
+      await client.query('UPDATE colunas SET ordem = $1 WHERE id = $2', [adjacentOrder, columnId]);
+      await client.query('UPDATE colunas SET ordem = $1 WHERE id = $2', [targetOrder, adjacentColumn.id]);
+    }
+    // Se não encontrou (já é o primeiro ou o último), não faz nada.
+
+    await client.query('COMMIT'); // Confirma as alterações
+    client.release();
+    res.status(200).send('Ordem das colunas atualizada');
+  } catch (error) {
+    console.error('Erro ao reordenar colunas:', error);
+    await client.query('ROLLBACK');
+    client.release();
+    res.status(500).send('Erro ao salvar a nova ordem das colunas');
+  }
+});
+
+
+
 module.exports = router;

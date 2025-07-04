@@ -6,6 +6,8 @@ import Kanban from "./components/Kanban";
 import Swal from "sweetalert2";
 import SearchBar from "./components/SearchBar";
 
+const API_BASE_URL = "http://192.168.15.115:5000/api"; // Defina a URL base da API
+
 function Todo() {
     const [columns, setColumns] = useState({});
     const [busca, setBusca] = useState('');
@@ -16,8 +18,8 @@ function Todo() {
         try {
             console.log("Buscando dados...");
             const [colunasRes, fluxosRes] = await Promise.all([
-                fetch("http://localhost:5000/api/colunas"),
-                fetch("http://localhost:5000/api/fluxos")
+                fetch(`${API_BASE_URL}/colunas`),
+                fetch(`${API_BASE_URL}/fluxos`)
             ]);
 
             if (!colunasRes.ok) throw new Error('Falha ao buscar colunas');
@@ -49,7 +51,7 @@ function Todo() {
 
 
     async function buscarFluxos() {
-        const res = await fetch("http://localhost:5000/api/fluxos");
+        const res = await fetch(`${API_BASE_URL}/fluxos`);
         const data = await res.json();
         setColumns(prevColumns => {
             const newState = { ...prevColumns };
@@ -84,7 +86,7 @@ function Todo() {
             };
 
             // 4. Envia a atualização para a API
-            const response = await fetch(`http://localhost:5000/api/fluxos/${updatedItem.id}`, {
+            const response = await fetch(`${API_BASE_URL}/fluxos/${updatedItem.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updatedItem)
@@ -108,7 +110,7 @@ function Todo() {
 
     async function onAddItem(dados) {
         try {
-            const response = await fetch("http://localhost:5000/api/fluxos", {
+            const response = await fetch(`${API_BASE_URL}/fluxos`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(dados)
@@ -126,7 +128,7 @@ function Todo() {
 
     async function onItemEdited(id, dadosAtualizados) {
         try {
-            const response = await fetch(`http://localhost:5000/api/fluxos/${id}`, {
+            const response = await fetch(`${API_BASE_URL}/fluxos/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(dadosAtualizados)
@@ -155,7 +157,7 @@ function Todo() {
 
             if (!confirm.isConfirmed) return;
 
-            const response = await fetch(`http://localhost:5000/api/fluxos/${item.id}`, {
+            const response = await fetch(`${API_BASE_URL}/fluxos/${item.id}`, {
                 method: 'DELETE'
             });
 
@@ -197,7 +199,7 @@ function Todo() {
 
         if (nome) {
             try {
-                const response = await fetch("http://localhost:5000/api/colunas", {
+                const response = await fetch(`${API_BASE_URL}/colunas`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ nome })
@@ -219,7 +221,7 @@ function Todo() {
         });
 
         if (nome && nome !== currentName) {
-            await fetch(`http://localhost:5000/api/colunas/${columnId}`, {
+            await fetch(`${API_BASE_URL}/colunas/${columnId}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ nome })
@@ -241,7 +243,7 @@ function Todo() {
 
         if (result.isConfirmed) {
             try {
-                const response = await fetch(`http://localhost:5000/api/colunas/${columnId}`, {
+                const response = await fetch(`${API_BASE_URL}/colunas/${columnId}`, {
                     method: 'DELETE'
                 });
                 const message = await response.text();
@@ -253,6 +255,27 @@ function Todo() {
             }
         }
     }
+
+    async function handleReorderColumn(columnId, direction) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/colunas/reorder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ columnId, direction }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Falha ao reordenar no servidor.');
+        }
+
+        // Recarrega todos os dados para exibir a nova ordem
+        fetchData();
+
+    } catch (error) {
+        console.error("Erro ao reordenar coluna:", error);
+        Swal.fire('Erro!', 'Não foi possível reordenar a coluna.', 'error');
+    }
+}
 
     // ======= FILTRO APLICADO AO KANBAN =======
     const colunasFiltradas = {};
@@ -271,7 +294,7 @@ function Todo() {
         try {
             const hoje = new Date().toISOString().split('T')[0]; // Pega a data de hoje no formato YYYY-MM-DD
 
-            await fetch(`http://localhost:5000/api/fluxos/${item.id}`, {
+            await fetch(`${API_BASE_URL}/fluxos/${item.id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 // Atualiza o status e a data de entrega
@@ -305,6 +328,7 @@ function Todo() {
                 onEditColumn={handleEditColumn}
                 onDeleteColumn={handleDeleteColumn}
                 onItemConcluded={handleConcludeItem}
+                onReorderColumn={handleReorderColumn}
             />
         </div>
     );

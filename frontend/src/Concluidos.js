@@ -4,6 +4,8 @@ import Swal from 'sweetalert2';
 import { FaUndo } from 'react-icons/fa'; // Ícone para reativar
 import './Concluidos.css';
 
+const API_BASE_URL = "http://192.168.15.115:5000/api"; // Defina a URL base da API
+
 function Concluidos() {
     const [carros, setCarros] = useState([]);
     const [colunas, setColunas] = useState({}); // Para guardar as colunas do Kanban
@@ -14,8 +16,8 @@ function Concluidos() {
         try {
             // Busca os carros concluídos e as colunas do Kanban em paralelo
             const [carrosRes, colunasRes] = await Promise.all([
-                fetch("http://localhost:5000/api/fluxos/concluidos"),
-                fetch("http://localhost:5000/api/colunas")
+                fetch(`${API_BASE_URL}/fluxos/concluidos`),
+                fetch(`${API_BASE_URL}/colunas`)
             ]);
 
             const carrosData = await carrosRes.json();
@@ -66,7 +68,7 @@ function Concluidos() {
 
     if (novoStatus) { // O 'novoStatus' agora será o ID correto (ex: "aguardando")
         try {
-            const response = await fetch(`http://localhost:5000/api/fluxos/${carro.id}`, {
+            const response = await fetch(`${API_BASE_URL}/fluxos/${carro.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: novoStatus })
@@ -92,16 +94,18 @@ function Concluidos() {
             <table className="concluidos-table">
                 <thead>
                     <tr>
+                        <th className="row-number-header">#</th>
                         <th>Cliente</th>
                         <th>Carro</th>
                         <th>Placa</th>
                         <th>Data de Entrega</th>
-                        <th>Ações</th> {/* Nova coluna */}
+                        <th>Ações</th> 
                     </tr>
                 </thead>
                 <tbody>
-                    {carros.map(carro => (
+                    {carros.map((carro,index) => (
                         <tr key={carro.id}>
+                            <td className="row-number-cell">{index + 1}</td>
                             <td>{carro.cliente}</td>
                             <td>{carro.carro}</td>
                             <td>{carro.placa}</td>

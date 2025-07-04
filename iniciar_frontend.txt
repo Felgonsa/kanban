@@ -1,0 +1,4 @@
+@echo off
+cd C:\sistemas\kanban\frontend
+call npm install
+call npm start

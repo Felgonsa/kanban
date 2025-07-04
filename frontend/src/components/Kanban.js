@@ -2,9 +2,10 @@
 import React from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import ListItem from "./ListItem";
-import { FaEdit, FaTrashAlt } from 'react-icons/fa'; // Importe os ícones
+import { FaEdit, FaTrashAlt, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 
-function Kanban({ columns, onDragEnd, onItemDeleted, onItemEdited, onEditColumn, onDeleteColumn, onItemConcluded}) {
+function Kanban({ columns, onDragEnd, onItemDeleted, onItemEdited, onEditColumn, 
+  onDeleteColumn, onItemConcluded, onReorderColumn }) {
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="kanbanBoard">
@@ -13,7 +14,15 @@ function Kanban({ columns, onDragEnd, onItemDeleted, onItemEdited, onEditColumn,
             {(provided) => (
               <div className="kanbanColumn" ref={provided.innerRef} {...provided.droppableProps}>
                 <div className="column-header">
-                  <h3>{column.name}</h3>
+                   <div className="column-order-actions">
+                    <button onClick={() => onReorderColumn(columnId, 'up')} title="Mover para cima">
+                      <FaArrowUp />
+                    </button>
+                    <button onClick={() => onReorderColumn(columnId, 'down')} title="Mover para baixo">
+                      <FaArrowDown />
+                    </button>
+                  </div>
+                  <h3>{column.name} ({column.items.length})</h3>
                   <div className="column-actions">
                     <button onClick={() => onEditColumn(columnId, column.name)} title="Editar nome da coluna">
                       <FaEdit />
